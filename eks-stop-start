@@ -20,7 +20,7 @@ def lambda_handler(event, context):
              }
         ]
 
-        # list of all ec2 instances which filtred by tag - (Owner:hezi)
+        # list of all ec2 instances which filtred by tag - (Owner:name_here)
         instances = ec2.instances.filter(Filters=filters)
 
         # list of all filtred instances id
