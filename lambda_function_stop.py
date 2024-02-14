@@ -14,7 +14,7 @@ def lambda_handler(event, context):
     # all running EC2 instances.
     filters = [{
             'Name': 'tag:Project',
-            'Values': ['nokia-ncc-ci']
+            'Values': ['ci']
         }
         ,
         {
