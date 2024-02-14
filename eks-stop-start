@@ -1,0 +1,70 @@
+import json
+import boto3
+import logging
+
+
+#setup simple logging for INFO
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+
+#define the connection
+autoscaling = boto3.client('autoscaling')
+ec2 = boto3.resource('ec2')
+
+def lambda_handler(event, context):
+
+        filters = [{
+                'Name': 'tag:Owner',
+                'Values': ['name_here']
+             }
+        ]
+
+        # list of all ec2 instances which filtred by tag - (Owner:hezi)
+        instances = ec2.instances.filter(Filters=filters)
+
+        # list of all filtred instances id
+        natInstances = [instance.id for instance in instances]
+
+        # auto scaling group name of the eks
+        groupname = autoscaling.describe_auto_scaling_groups(Filters=filters)["AutoScalingGroups"][0]["AutoScalingGroupName"]      
+
+        if servers_need_to_be_started(groupname):
+            action = "Starting"
+            min_size = 2
+            max_size = 2
+            desired_capacity = 2
+            # start nat instances
+            ec2.instances.filter(InstanceIds=natInstances).start()
+        else:
+            action = "Stopping"
+            min_size = 0
+            max_size = 0
+            desired_capacity = 0
+            # stop nat instances
+            ec2.instances.filter(InstanceIds=natInstances).stop()
+
+        print (action + ": " + groupname)
+        
+        response = autoscaling.update_auto_scaling_group(
+            AutoScalingGroupName=groupname,
+            MinSize=min_size,
+            MaxSize=max_size,
+            DesiredCapacity=desired_capacity,
+        )
+
+        print (response)
+
+def servers_need_to_be_started(group_name):
+    min_group_size = get_current_min_group_size(group_name)
+    if min_group_size == 0:
+        return True
+    else:
+        return False
+    
+
+def get_current_min_group_size(group_name):
+    response = autoscaling.describe_auto_scaling_groups(
+        AutoScalingGroupNames=[group_name])
+    
+    return response["AutoScalingGroups"][0]["MinSize"]
